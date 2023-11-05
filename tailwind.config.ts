@@ -16,6 +16,9 @@ module.exports = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['var(--font-geist-sans)']
+      },
       backgroundImage: {
         'hero-bg': "url('/bg.jpeg')"
       },

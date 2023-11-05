@@ -1,18 +1,28 @@
-import { SHOPIFY_GRAPHQL_API_ENDPOINT, HIDDEN_PRODUCT_TAG } from "../constants"
-import { getProductsQuery } from "./queries/product";
-import { Cart, Connection, ShopifyCart, ShopifyProduct, Image, Collection, ShopifyCollection } from "./types";
+import { SHOPIFY_GRAPHQL_API_ENDPOINT, HIDDEN_PRODUCT_TAG, TAGS } from "../constants"
+import { ensureStartsWith } from "../utils";
+import { getCollectionProductsQuery, getCollectionsQuery } from "./queries/collection";
+import { getProductQuery, getProductsQuery } from "./queries/product";
+import { Cart, Connection, ShopifyCart, ShopifyProduct, Image, Collection, ShopifyCollection, ShopifyCollectionsOperation, Product, ShopifyProductOperation, ShopifyProductsOperation, ShopifyCollectionProductsOperation } from "./types";
 
 const domain = process.env.SHOPIFY_STORE_DOMAIN
 const endpoint = `https://${domain}${SHOPIFY_GRAPHQL_API_ENDPOINT}`
-const key = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN
+const key = process.env.SHOPIFY_STOREFRONT_ACCESS_TOKEN!
 
-export async function shopifyFetch({
+type ExtractVariables<T> = T extends { variables: object } ? T['variables'] : never;
+
+export async function shopifyFetch<T>({
   cache = 'force-cache',
   headers,
   query,
   tags,
   variables
-}: any) {
+}: {
+  cache?: RequestCache,
+  headers?: HeadersInit,
+  query: string;
+  tags?: string[];
+  variables?: ExtractVariables<T>
+}): Promise<{ status: number; body: T } | never> {
   try {
     const result = await fetch(endpoint, {
       method: "POST",
@@ -134,13 +144,29 @@ const reshapeProducts = (products: ShopifyProduct[]) => {
   return reshapedProducts;
 };
 
+export async function getProduct(handle: string): Promise<Product | undefined> {
+  const res = await shopifyFetch<ShopifyProductOperation>({
+    query: getProductQuery,
+    tags: [TAGS.products],
+    variables: {
+      handle
+    }
+  })
+  return reshapeProduct(res.body.data.product, false);
+}
+
 export async function getProducts({
   query,
   reverse,
   sortKey
-}: any) {
-  const res = await shopifyFetch({
+}: {
+  query?: string;
+  reverse?: boolean;
+  sortKey?: string;
+}): Promise<Product[]> {
+  const res = await shopifyFetch<ShopifyProductsOperation>({
     query: getProductsQuery,
+    tags: [TAGS.products],
     variables: {
       query,
       reverse,
@@ -149,4 +175,56 @@ export async function getProducts({
   })
 
   return reshapeProducts(removeEdgesAndNodes(res.body.data.products))
+}
+
+export async function getCollections(): Promise<Collection[]> {
+  const res = await shopifyFetch<ShopifyCollectionsOperation>({
+    query: getCollectionsQuery,
+  });
+  const shopifyCollections = removeEdgesAndNodes(res.body?.data?.collections);
+  const collections = [
+    {
+      handle: '',
+      title: 'All',
+      description: 'All products',
+      seo: {
+        title: 'All',
+        description: 'All products'
+      },
+      path: '/search',
+      updatedAt: new Date().toISOString()
+    },
+    ...reshapeCollections(shopifyCollections).filter(
+      (collection) => !collection.handle.startsWith('hidden')
+    )
+  ];
+
+  return collections;
+}
+
+export async function getCollectionProducts({
+  collection,
+  reverse,
+  sortKey
+}: {
+  collection: string;
+  reverse?: boolean;
+  sortKey?: string;
+}): Promise<Product[]> {
+  const res = await shopifyFetch<ShopifyCollectionProductsOperation>({
+    query: getCollectionProductsQuery,
+    tags: [TAGS.collections, TAGS.products],
+    variables: {
+      handle: collection,
+      reverse,
+      sortKey: sortKey === "CREATED_AT" ? "CREATED" : sortKey
+    }
+  });
+
+  if (!res.body.data.collection) {
+    console.log(`No collection was found for ${collection}`)
+    return []
+  }
+
+  return reshapeProducts(removeEdgesAndNodes(res.body.data.collection.products));
 }

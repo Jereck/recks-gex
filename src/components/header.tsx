@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import React from 'react'
 import { Button } from './ui/button'
-import { Sun, Moon } from 'lucide-react'
+import { Sun, Moon, ShoppingCart } from 'lucide-react'
 import { useTheme } from 'next-themes'
 
 const Header = () => {
@@ -15,7 +15,7 @@ const Header = () => {
       label: "Home",
     },
     {
-      href: "/",
+      href: "/search",
       label: "Store",
     },
     {
@@ -25,7 +25,7 @@ const Header = () => {
   ];
 
   return (
-    <div className="flex flex-row w-full justify-between items-center px-6">
+    <div className="flex flex-row w-full justify-between items-center px-6 py-3">
       <div>
         <h1>Recks Gex</h1>
       </div>
@@ -42,6 +42,12 @@ const Header = () => {
         ))}
       </nav>
       <div>
+        <Button
+          variant="ghost"
+          size="icon"
+        >
+          <ShoppingCart />
+        </Button>
         <Button
           variant="ghost"
           size="icon"
