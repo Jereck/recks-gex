@@ -31,9 +31,8 @@ const Header = () => {
       </div>
       <nav className="mx-6 flex items-center space-x-4 lg:space-x-6 md:block">
         {routes.map((route, i) => (
-          <Button asChild variant="ghost">
+          <Button key={i} asChild variant="ghost">
             <Link
-              key={i}
               href={route.href}
               className="text-sm font-medium transition-colors"
             >

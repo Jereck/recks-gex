@@ -16,6 +16,13 @@ module.exports = {
       },
     },
     extend: {
+      backgroundImage: {
+        'hero-bg': "url('/bg.jpeg')"
+      },
+      backgroundColor: {
+        'primary': '#FFD700',
+        'primary-hover': '#FFA500'
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
